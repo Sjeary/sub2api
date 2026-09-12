@@ -116,6 +116,20 @@ func (_c *UserCreate) SetNillableBalance(v *float64) *UserCreate {
 	return _c
 }
 
+// SetOverdraftLimit sets the "overdraft_limit" field.
+func (_c *UserCreate) SetOverdraftLimit(v float64) *UserCreate {
+	_c.mutation.SetOverdraftLimit(v)
+	return _c
+}
+
+// SetNillableOverdraftLimit sets the "overdraft_limit" field if the given value is not nil.
+func (_c *UserCreate) SetNillableOverdraftLimit(v *float64) *UserCreate {
+	if v != nil {
+		_c.SetOverdraftLimit(*v)
+	}
+	return _c
+}
+
 // SetFrozenBalance sets the "frozen_balance" field.
 func (_c *UserCreate) SetFrozenBalance(v float64) *UserCreate {
 	_c.mutation.SetFrozenBalance(v)
@@ -712,6 +726,11 @@ func (_c *UserCreate) check() error {
 	if _, ok := _c.mutation.Balance(); !ok {
 		return &ValidationError{Name: "balance", err: errors.New(`ent: missing required field "User.balance"`)}
 	}
+	if v, ok := _c.mutation.OverdraftLimit(); ok {
+		if err := user.OverdraftLimitValidator(v); err != nil {
+			return &ValidationError{Name: "overdraft_limit", err: fmt.Errorf(`ent: validator failed for field "User.overdraft_limit": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.FrozenBalance(); !ok {
 		return &ValidationError{Name: "frozen_balance", err: errors.New(`ent: missing required field "User.frozen_balance"`)}
 	}
@@ -820,6 +839,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Balance(); ok {
 		_spec.SetField(user.FieldBalance, field.TypeFloat64, value)
 		_node.Balance = value
+	}
+	if value, ok := _c.mutation.OverdraftLimit(); ok {
+		_spec.SetField(user.FieldOverdraftLimit, field.TypeFloat64, value)
+		_node.OverdraftLimit = &value
 	}
 	if value, ok := _c.mutation.FrozenBalance(); ok {
 		_spec.SetField(user.FieldFrozenBalance, field.TypeFloat64, value)
@@ -1241,6 +1264,30 @@ func (u *UserUpsert) AddBalance(v float64) *UserUpsert {
 	return u
 }
 
+// SetOverdraftLimit sets the "overdraft_limit" field.
+func (u *UserUpsert) SetOverdraftLimit(v float64) *UserUpsert {
+	u.Set(user.FieldOverdraftLimit, v)
+	return u
+}
+
+// UpdateOverdraftLimit sets the "overdraft_limit" field to the value that was provided on create.
+func (u *UserUpsert) UpdateOverdraftLimit() *UserUpsert {
+	u.SetExcluded(user.FieldOverdraftLimit)
+	return u
+}
+
+// AddOverdraftLimit adds v to the "overdraft_limit" field.
+func (u *UserUpsert) AddOverdraftLimit(v float64) *UserUpsert {
+	u.Add(user.FieldOverdraftLimit, v)
+	return u
+}
+
+// ClearOverdraftLimit clears the value of the "overdraft_limit" field.
+func (u *UserUpsert) ClearOverdraftLimit() *UserUpsert {
+	u.SetNull(user.FieldOverdraftLimit)
+	return u
+}
+
 // SetFrozenBalance sets the "frozen_balance" field.
 func (u *UserUpsert) SetFrozenBalance(v float64) *UserUpsert {
 	u.Set(user.FieldFrozenBalance, v)
@@ -1657,6 +1704,34 @@ func (u *UserUpsertOne) AddBalance(v float64) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateBalance() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalance()
+	})
+}
+
+// SetOverdraftLimit sets the "overdraft_limit" field.
+func (u *UserUpsertOne) SetOverdraftLimit(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetOverdraftLimit(v)
+	})
+}
+
+// AddOverdraftLimit adds v to the "overdraft_limit" field.
+func (u *UserUpsertOne) AddOverdraftLimit(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddOverdraftLimit(v)
+	})
+}
+
+// UpdateOverdraftLimit sets the "overdraft_limit" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateOverdraftLimit() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateOverdraftLimit()
+	})
+}
+
+// ClearOverdraftLimit clears the value of the "overdraft_limit" field.
+func (u *UserUpsertOne) ClearOverdraftLimit() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearOverdraftLimit()
 	})
 }
 
@@ -2288,6 +2363,34 @@ func (u *UserUpsertBulk) AddBalance(v float64) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateBalance() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateBalance()
+	})
+}
+
+// SetOverdraftLimit sets the "overdraft_limit" field.
+func (u *UserUpsertBulk) SetOverdraftLimit(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetOverdraftLimit(v)
+	})
+}
+
+// AddOverdraftLimit adds v to the "overdraft_limit" field.
+func (u *UserUpsertBulk) AddOverdraftLimit(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddOverdraftLimit(v)
+	})
+}
+
+// UpdateOverdraftLimit sets the "overdraft_limit" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateOverdraftLimit() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateOverdraftLimit()
+	})
+}
+
+// ClearOverdraftLimit clears the value of the "overdraft_limit" field.
+func (u *UserUpsertBulk) ClearOverdraftLimit() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.ClearOverdraftLimit()
 	})
 }
 

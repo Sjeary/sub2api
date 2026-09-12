@@ -49,6 +49,12 @@ func (User) Fields() []ent.Field {
 		field.Float("balance").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),
+		field.Float("overdraft_limit").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
+			Min(0).
+			Max(999999999999).
+			Optional().
+			Nillable(),
 		field.Float("frozen_balance").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),

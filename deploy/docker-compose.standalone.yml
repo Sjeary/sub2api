@@ -28,6 +28,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      - BILLING_DEFAULT_OVERDRAFT_LIMIT=${BILLING_DEFAULT_OVERDRAFT_LIMIT:-0}
       # =======================================================================
       # Auto Setup
       # =======================================================================

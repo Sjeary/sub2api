@@ -589,6 +589,9 @@ export default {
         concurrencyPlaceholder: '0 表示不限制',
         concurrencyHint: '该用户的最大并发请求数，0 = 不限制',
         rpmLimitPlaceholder: '0 表示不限制',
+        overdraftLimit: '调用透支额度（美元）',
+        inheritOverdraftLimit: '跟随全站默认额度',
+        overdraftLimitHint: '设为 0 禁用透支。额度用于按余额计费的调用；已开始的请求会完整结算，最终欠款可能超过额度。',
         rpmLimitHint: '该用户每分钟最大请求数，0 = 不限制；仅在所用分组未设置 rpm_limit 时作为兜底生效'
       },
       adjustBalance: '调整余额',
@@ -608,6 +611,7 @@ export default {
       failedToSave: '保存用户失败',
       failedToAdjust: '调整失败',
       emailRequired: '请输入邮箱',
+      invalidOverdraftLimit: '请输入 0 到 999999999999 之间的有效透支额度',
       concurrencyNonNegative: '并发数不能为负数，0 表示不限制',
       amountRequired: '请输入有效金额',
       insufficientBalance: '余额不足',

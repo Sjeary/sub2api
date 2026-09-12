@@ -129,6 +129,33 @@ func (_u *UserUpdate) AddBalance(v float64) *UserUpdate {
 	return _u
 }
 
+// SetOverdraftLimit sets the "overdraft_limit" field.
+func (_u *UserUpdate) SetOverdraftLimit(v float64) *UserUpdate {
+	_u.mutation.ResetOverdraftLimit()
+	_u.mutation.SetOverdraftLimit(v)
+	return _u
+}
+
+// SetNillableOverdraftLimit sets the "overdraft_limit" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableOverdraftLimit(v *float64) *UserUpdate {
+	if v != nil {
+		_u.SetOverdraftLimit(*v)
+	}
+	return _u
+}
+
+// AddOverdraftLimit adds value to the "overdraft_limit" field.
+func (_u *UserUpdate) AddOverdraftLimit(v float64) *UserUpdate {
+	_u.mutation.AddOverdraftLimit(v)
+	return _u
+}
+
+// ClearOverdraftLimit clears the value of the "overdraft_limit" field.
+func (_u *UserUpdate) ClearOverdraftLimit() *UserUpdate {
+	_u.mutation.ClearOverdraftLimit()
+	return _u
+}
+
 // SetFrozenBalance sets the "frozen_balance" field.
 func (_u *UserUpdate) SetFrozenBalance(v float64) *UserUpdate {
 	_u.mutation.ResetFrozenBalance()
@@ -978,6 +1005,11 @@ func (_u *UserUpdate) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.OverdraftLimit(); ok {
+		if err := user.OverdraftLimitValidator(v); err != nil {
+			return &ValidationError{Name: "overdraft_limit", err: fmt.Errorf(`ent: validator failed for field "User.overdraft_limit": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := user.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "User.status": %w`, err)}
@@ -1031,6 +1063,15 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedBalance(); ok {
 		_spec.AddField(user.FieldBalance, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.OverdraftLimit(); ok {
+		_spec.SetField(user.FieldOverdraftLimit, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedOverdraftLimit(); ok {
+		_spec.AddField(user.FieldOverdraftLimit, field.TypeFloat64, value)
+	}
+	if _u.mutation.OverdraftLimitCleared() {
+		_spec.ClearField(user.FieldOverdraftLimit, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.FrozenBalance(); ok {
 		_spec.SetField(user.FieldFrozenBalance, field.TypeFloat64, value)
@@ -1819,6 +1860,33 @@ func (_u *UserUpdateOne) SetNillableBalance(v *float64) *UserUpdateOne {
 // AddBalance adds value to the "balance" field.
 func (_u *UserUpdateOne) AddBalance(v float64) *UserUpdateOne {
 	_u.mutation.AddBalance(v)
+	return _u
+}
+
+// SetOverdraftLimit sets the "overdraft_limit" field.
+func (_u *UserUpdateOne) SetOverdraftLimit(v float64) *UserUpdateOne {
+	_u.mutation.ResetOverdraftLimit()
+	_u.mutation.SetOverdraftLimit(v)
+	return _u
+}
+
+// SetNillableOverdraftLimit sets the "overdraft_limit" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableOverdraftLimit(v *float64) *UserUpdateOne {
+	if v != nil {
+		_u.SetOverdraftLimit(*v)
+	}
+	return _u
+}
+
+// AddOverdraftLimit adds value to the "overdraft_limit" field.
+func (_u *UserUpdateOne) AddOverdraftLimit(v float64) *UserUpdateOne {
+	_u.mutation.AddOverdraftLimit(v)
+	return _u
+}
+
+// ClearOverdraftLimit clears the value of the "overdraft_limit" field.
+func (_u *UserUpdateOne) ClearOverdraftLimit() *UserUpdateOne {
+	_u.mutation.ClearOverdraftLimit()
 	return _u
 }
 
@@ -2684,6 +2752,11 @@ func (_u *UserUpdateOne) check() error {
 			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "User.role": %w`, err)}
 		}
 	}
+	if v, ok := _u.mutation.OverdraftLimit(); ok {
+		if err := user.OverdraftLimitValidator(v); err != nil {
+			return &ValidationError{Name: "overdraft_limit", err: fmt.Errorf(`ent: validator failed for field "User.overdraft_limit": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := user.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "User.status": %w`, err)}
@@ -2754,6 +2827,15 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.AddedBalance(); ok {
 		_spec.AddField(user.FieldBalance, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.OverdraftLimit(); ok {
+		_spec.SetField(user.FieldOverdraftLimit, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedOverdraftLimit(); ok {
+		_spec.AddField(user.FieldOverdraftLimit, field.TypeFloat64, value)
+	}
+	if _u.mutation.OverdraftLimitCleared() {
+		_spec.ClearField(user.FieldOverdraftLimit, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.FrozenBalance(); ok {
 		_spec.SetField(user.FieldFrozenBalance, field.TypeFloat64, value)

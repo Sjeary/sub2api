@@ -1105,10 +1105,15 @@ billing:
     # Number of requests to allow in half-open state
     # 半开状态允许通过的请求数
     half_open_requests: 3
-  # Conservative minimum balance required before forwarding balance-billed requests.
-  # Set to 0 to only require balance > 0.
-  # 余额计费请求转发前要求的保守最小余额；设为 0 则仅要求余额 > 0。
+  # Minimum available balance plus credit before forwarding balance-billed requests.
+  # Set to 0 to only require balance + effective overdraft limit > 0.
+  # 余额计费请求转发前要求的余额加透支额度下限；设为 0 则仅要求两者之和 > 0。
   minimum_balance_reserve: 0.000001
+  # Site-wide overdraft limit (USD); NULL user overrides inherit this value.
+  # Controls new request admission. In-flight requests still settle in full.
+  # 全站默认调用透支额度（美元）；未单独设置额度的用户跟随此值，0 表示关闭。
+  # 余额 + 有效额度需满足上面的 minimum_balance_reserve；已开始请求仍完整结算。
+  default_overdraft_limit: 0
   # Cache TTL (seconds) for per-user × per-platform quota records
   # 用户 × 平台 quota 缓存 TTL（秒），默认 86400=1天，覆盖典型 daily 窗口
   user_platform_quota_cache_ttl_seconds: 86400

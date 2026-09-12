@@ -90,6 +90,11 @@ func Balance(v float64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldBalance, v))
 }
 
+// OverdraftLimit applies equality check predicate on the "overdraft_limit" field. It's identical to OverdraftLimitEQ.
+func OverdraftLimit(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOverdraftLimit, v))
+}
+
 // FrozenBalance applies equality check predicate on the "frozen_balance" field. It's identical to FrozenBalanceEQ.
 func FrozenBalance(v float64) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldFrozenBalance, v))
@@ -543,6 +548,56 @@ func BalanceLT(v float64) predicate.User {
 // BalanceLTE applies the LTE predicate on the "balance" field.
 func BalanceLTE(v float64) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldBalance, v))
+}
+
+// OverdraftLimitEQ applies the EQ predicate on the "overdraft_limit" field.
+func OverdraftLimitEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldOverdraftLimit, v))
+}
+
+// OverdraftLimitNEQ applies the NEQ predicate on the "overdraft_limit" field.
+func OverdraftLimitNEQ(v float64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldOverdraftLimit, v))
+}
+
+// OverdraftLimitIn applies the In predicate on the "overdraft_limit" field.
+func OverdraftLimitIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldOverdraftLimit, vs...))
+}
+
+// OverdraftLimitNotIn applies the NotIn predicate on the "overdraft_limit" field.
+func OverdraftLimitNotIn(vs ...float64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldOverdraftLimit, vs...))
+}
+
+// OverdraftLimitGT applies the GT predicate on the "overdraft_limit" field.
+func OverdraftLimitGT(v float64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldOverdraftLimit, v))
+}
+
+// OverdraftLimitGTE applies the GTE predicate on the "overdraft_limit" field.
+func OverdraftLimitGTE(v float64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldOverdraftLimit, v))
+}
+
+// OverdraftLimitLT applies the LT predicate on the "overdraft_limit" field.
+func OverdraftLimitLT(v float64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldOverdraftLimit, v))
+}
+
+// OverdraftLimitLTE applies the LTE predicate on the "overdraft_limit" field.
+func OverdraftLimitLTE(v float64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldOverdraftLimit, v))
+}
+
+// OverdraftLimitIsNil applies the IsNil predicate on the "overdraft_limit" field.
+func OverdraftLimitIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldOverdraftLimit))
+}
+
+// OverdraftLimitNotNil applies the NotNil predicate on the "overdraft_limit" field.
+func OverdraftLimitNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldOverdraftLimit))
 }
 
 // FrozenBalanceEQ applies the EQ predicate on the "frozen_balance" field.

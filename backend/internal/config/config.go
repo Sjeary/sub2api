@@ -899,9 +899,11 @@ func normalizeProxyProbeURLs(targets []ProbeURLConfig) ([]ProbeURLConfig, error)
 
 type BillingConfig struct {
 	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
+	// DefaultOverdraftLimit is the site-wide credit for users without an override.
+	DefaultOverdraftLimit float64 `mapstructure:"default_overdraft_limit"`
 	// MinimumBalanceReserve is the conservative preflight floor for balance billing.
-	// Requests in balance mode are rejected when the cached balance is below this
-	// amount, even if it is still positive. Set to 0 to keep the legacy balance > 0 gate.
+	// Balance plus the effective overdraft limit must meet this amount.
+	// Set to 0 to only require remaining funds or credit to be positive.
 	MinimumBalanceReserve float64 `mapstructure:"minimum_balance_reserve"`
 	// UserPlatformQuotaCacheTTLSeconds 用户 × 平台 quota 缓存 TTL（秒），默认 86400=1天，覆盖典型 daily 窗口。
 	// 消费点：
@@ -2076,6 +2078,7 @@ func setDefaults() {
 	viper.SetDefault("billing.circuit_breaker.reset_timeout_seconds", 30)
 	viper.SetDefault("billing.circuit_breaker.half_open_requests", 3)
 	viper.SetDefault("billing.minimum_balance_reserve", 0.000001)
+	viper.SetDefault("billing.default_overdraft_limit", 0)
 	viper.SetDefault("billing.user_platform_quota_cache_ttl_seconds", 86400)
 	viper.SetDefault("billing.user_platform_quota_sentinel_ttl_seconds", 3600)
 
@@ -3046,6 +3049,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Billing.MinimumBalanceReserve < 0 {
 		return fmt.Errorf("billing.minimum_balance_reserve must be non-negative")
+	}
+	if math.IsNaN(c.Billing.DefaultOverdraftLimit) || math.IsInf(c.Billing.DefaultOverdraftLimit, 0) || c.Billing.DefaultOverdraftLimit < 0 || c.Billing.DefaultOverdraftLimit > 999999999999 {
+		return fmt.Errorf("billing.default_overdraft_limit must be a finite value between 0 and 999999999999")
 	}
 	if c.Database.MaxOpenConns <= 0 {
 		return fmt.Errorf("database.max_open_conns must be positive")

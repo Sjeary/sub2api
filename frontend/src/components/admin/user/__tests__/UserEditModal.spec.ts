@@ -62,6 +62,41 @@ describe('UserEditModal concurrency', () => {
     update.mockResolvedValue({})
   })
 
+  it('sets an explicit zero overdraft limit instead of inheriting', async () => {
+    const wrapper = mountModal(3)
+    await wrapper.get('[data-test="inherit-overdraft-input"]').setValue(false)
+    await wrapper.get('[data-test="overdraft-input"]').setValue('0')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(update).toHaveBeenCalledWith(7, expect.objectContaining({ overdraft_limit: 0 }))
+  })
+
+  it('sends null to restore the site default', async () => {
+    const wrapper = mountModal(3)
+    await wrapper.setProps({ user: { ...wrapper.props('user'), overdraft_limit: 10 } })
+    await wrapper.get('[data-test="inherit-overdraft-input"]').setValue(true)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(update).toHaveBeenCalledWith(7, expect.objectContaining({ overdraft_limit: null }))
+  })
+
+  it('omits an unchanged overdraft setting from unrelated edits', async () => {
+    const wrapper = mountModal(3)
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(update.mock.calls[0][1]).not.toHaveProperty('overdraft_limit')
+  })
+
+  it('rejects a negative overdraft limit', async () => {
+    const wrapper = mountModal(3)
+    await wrapper.get('[data-test="inherit-overdraft-input"]').setValue(false)
+    await wrapper.get('[data-test="overdraft-input"]').setValue('-1')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(update).not.toHaveBeenCalled()
+    expect(showError).toHaveBeenCalled()
+  })
+
   // Regression coverage for issue #5977: the gateway treats concurrency <= 0 as
   // unlimited (AcquireUserSlot) and both the batch limits endpoint and the bulk
   // edit modal accept 0, so this dialog must not be the only place that rejects

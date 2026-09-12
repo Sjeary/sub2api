@@ -2,6 +2,40 @@
 
 This directory contains files for deploying Sub2API on Linux servers and Apple-silicon Macs.
 
+## Optional request overdraft / 可选调用透支
+
+Balance-billed requests can use an administrator-assigned overdraft allowance.
+The site default is `0` (disabled). Set it in `config.yaml`:
+
+```yaml
+billing:
+  default_overdraft_limit: 10  # USD
+```
+
+For Compose deployments, set `BILLING_DEFAULT_OVERDRAFT_LIMIT=10` in `.env` and
+recreate the application container. Restart binary deployments after changing
+the configuration. Use the same setting on every application instance.
+
+In **Users → Create/Edit**, select **Use the site default limit**, or enter a
+user-specific allowance. An explicit `0` disables overdraft for that user even
+when the site default is positive. The admin API accepts `overdraft_limit` as a
+nonnegative number or `null` (inherit); omitting it from an update preserves the
+existing value. Changes to user overrides invalidate the authentication cache.
+
+The allowance applies to admission of balance-billed API calls. Balance plus the
+allowance must be positive and meet `billing.minimum_balance_reserve`. In-flight
+requests settle their full actual cost, so concurrent or long requests can leave
+debt beyond the allowance. This is not a hard cap on final debt. API-key quotas,
+platform quotas and subscription limits still apply; batch image holds and
+payment/refund operations continue to use actual balance. Recharges repay debt
+without turning the allowance into stored balance or recharge revenue.
+
+按余额计费的调用支持“全站默认额度 + 用户独立覆盖”。全站配置默认为 0；
+管理员在用户创建/编辑弹窗中选择跟随全站，或设置独立额度，独立设为 0 即关闭。
+额度用于判断是否接受新请求；已开始请求按实际费用完整结算，并发或长请求可能使
+最终欠款超过额度。充值会偿还欠款，额度本身不计入余额和充值收入。全站配置修改后
+需重启服务或重新创建容器，多实例部署应保持一致。
+
 ## Deployment Methods
 
 | Method | Best For | Setup Wizard |

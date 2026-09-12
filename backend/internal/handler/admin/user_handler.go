@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -65,6 +66,7 @@ type CreateUserRequest struct {
 	Notes                string   `json:"notes"`
 	Role                 string   `json:"role" binding:"omitempty,oneof=admin user"`
 	Balance              *float64 `json:"balance"`
+	OverdraftLimit       *float64 `json:"overdraft_limit" binding:"omitempty,gte=0,lte=999999999999"`
 	Concurrency          int      `json:"concurrency"`
 	RPMLimit             int      `json:"rpm_limit"`
 	AllowedGroups        []int64  `json:"allowed_groups"`
@@ -74,17 +76,18 @@ type CreateUserRequest struct {
 // UpdateUserRequest represents admin update user request
 // 使用指针类型来区分"未提供"和"设置为0"
 type UpdateUserRequest struct {
-	Email                string   `json:"email" binding:"omitempty,email"`
-	Password             string   `json:"password" binding:"omitempty,min=6"`
-	Username             *string  `json:"username"`
-	Notes                *string  `json:"notes"`
-	Role                 string   `json:"role" binding:"omitempty,oneof=admin user"`
-	Balance              *float64 `json:"balance"`
-	Concurrency          *int     `json:"concurrency"`
-	RPMLimit             *int     `json:"rpm_limit"`
-	Status               string   `json:"status" binding:"omitempty,oneof=active disabled"`
-	AllowedGroups        *[]int64 `json:"allowed_groups"`
-	RestrictPublicGroups *bool    `json:"restrict_public_groups"`
+	Email                string          `json:"email" binding:"omitempty,email"`
+	Password             string          `json:"password" binding:"omitempty,min=6"`
+	Username             *string         `json:"username"`
+	Notes                *string         `json:"notes"`
+	Role                 string          `json:"role" binding:"omitempty,oneof=admin user"`
+	Balance              *float64        `json:"balance"`
+	OverdraftLimit       json.RawMessage `json:"overdraft_limit"`
+	Concurrency          *int            `json:"concurrency"`
+	RPMLimit             *int            `json:"rpm_limit"`
+	Status               string          `json:"status" binding:"omitempty,oneof=active disabled"`
+	AllowedGroups        *[]int64        `json:"allowed_groups"`
+	RestrictPublicGroups *bool           `json:"restrict_public_groups"`
 	// GroupRates 用户专属分组倍率配置
 	// map[groupID]*rate，nil 表示删除该分组的专属倍率
 	GroupRates map[int64]*float64 `json:"group_rates"`
@@ -292,6 +295,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		Notes:                req.Notes,
 		Role:                 req.Role,
 		Balance:              req.Balance,
+		OverdraftLimit:       req.OverdraftLimit,
 		Concurrency:          req.Concurrency,
 		RPMLimit:             req.RPMLimit,
 		AllowedGroups:        req.AllowedGroups,
@@ -343,6 +347,13 @@ func (h *UserHandler) Update(c *gin.Context) {
 		}
 	}
 
+	var overdraftLimit *float64
+	if len(req.OverdraftLimit) > 0 {
+		if err := json.Unmarshal(req.OverdraftLimit, &overdraftLimit); err != nil {
+			response.BadRequest(c, "overdraft_limit must be a number or null")
+			return
+		}
+	}
 	// 使用指针类型直接传递，nil 表示未提供该字段
 	user, err := h.adminService.UpdateUser(c.Request.Context(), userID, &service.UpdateUserInput{
 		Email:                req.Email,
@@ -351,6 +362,8 @@ func (h *UserHandler) Update(c *gin.Context) {
 		Notes:                req.Notes,
 		Role:                 req.Role,
 		Balance:              req.Balance,
+		OverdraftLimit:       overdraftLimit,
+		OverdraftLimitSet:    len(req.OverdraftLimit) > 0,
 		Concurrency:          req.Concurrency,
 		RPMLimit:             req.RPMLimit,
 		Status:               req.Status,

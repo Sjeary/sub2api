@@ -524,6 +524,9 @@ export default {
         concurrencyPlaceholder: '0 = unlimited',
         concurrencyHint: 'Max concurrent requests for this user; 0 = unlimited.',
         rpmLimitPlaceholder: '0 = unlimited',
+        overdraftLimit: 'Request overdraft limit (USD)',
+        inheritOverdraftLimit: 'Use the site default limit',
+        overdraftLimitHint: 'Set to 0 to disable overdraft. Applies to balance-billed requests; in-flight requests settle in full and may exceed the limit.',
         rpmLimitHint: 'Max requests per minute for this user; 0 = unlimited. Acts as a fallback only when the group has no rpm_limit set.'
       },
       columns: {
@@ -587,6 +590,7 @@ export default {
       failedToToggle: 'Failed to update user status',
       failedToLoadApiKeys: 'Failed to load user API keys',
       emailRequired: 'Please enter email',
+      invalidOverdraftLimit: 'Enter an overdraft limit between 0 and 999999999999.',
       concurrencyNonNegative: 'Concurrency cannot be negative; 0 = unlimited',
       amountRequired: 'Please enter a valid amount',
       insufficientBalance: 'Insufficient balance',

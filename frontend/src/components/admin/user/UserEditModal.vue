@@ -66,6 +66,15 @@
         />
         <p class="input-hint">{{ t('admin.users.form.rpmLimitHint') }}</p>
       </div>
+      <div>
+        <label class="input-label">{{ t('admin.users.form.overdraftLimit') }}</label>
+        <label class="mb-2 flex items-center gap-2 text-sm">
+          <input v-model="form.inherit_overdraft_limit" type="checkbox" data-test="inherit-overdraft-input" />
+          {{ t('admin.users.form.inheritOverdraftLimit') }}
+        </label>
+        <input v-if="!form.inherit_overdraft_limit" v-model.number="form.overdraft_limit" type="number" min="0" max="999999999999" step="any" class="input" data-test="overdraft-input" />
+        <p class="input-hint">{{ t('admin.users.form.overdraftLimitHint') }}</p>
+      </div>
       <UserAttributeForm v-model="form.customAttributes" :user-id="user?.id" />
     </form>
     <template #footer>
@@ -113,12 +122,14 @@ const form = reactive({
   role: 'user' as AdminUser['role'],
   concurrency: 1,
   rpm_limit: 0,
+  inherit_overdraft_limit: true,
+  overdraft_limit: 0,
   customAttributes: {} as UserAttributeValuesMap
 })
 
 watch(() => props.user, (u) => {
   if (u) {
-    Object.assign(form, { email: u.email, password: '', username: u.username || '', notes: u.notes || '', role: u.role || 'user', concurrency: u.concurrency, rpm_limit: u.rpm_limit ?? 0, customAttributes: {} })
+    Object.assign(form, { email: u.email, password: '', username: u.username || '', notes: u.notes || '', role: u.role || 'user', concurrency: u.concurrency, rpm_limit: u.rpm_limit ?? 0, inherit_overdraft_limit: u.overdraft_limit == null, overdraft_limit: u.overdraft_limit ?? 0, customAttributes: {} })
     passwordCopied.value = false
   }
 }, { immediate: true })
@@ -146,10 +157,16 @@ const handleUpdateUser = async () => {
     appStore.showError(t('admin.users.concurrencyNonNegative'))
     return
   }
+  const overdraftLimit = form.inherit_overdraft_limit ? null : form.overdraft_limit
+  if (overdraftLimit !== null && (!Number.isFinite(overdraftLimit) || overdraftLimit < 0 || overdraftLimit > 999999999999)) {
+    appStore.showError(t('admin.users.invalidOverdraftLimit'))
+    return
+  }
   const userId = props.user.id
   submitting.value = true
   try {
     const data: any = { email: form.email, username: form.username, notes: form.notes, role: form.role, concurrency: form.concurrency, rpm_limit: form.rpm_limit }
+    if (overdraftLimit !== (props.user.overdraft_limit ?? null)) data.overdraft_limit = overdraftLimit
     if (form.password.trim()) data.password = form.password.trim()
     // 提升为管理员属敏感操作：后端返回 STEP_UP_REQUIRED 时弹 TOTP 验证并重试
     await stepUp.run(() => adminAPI.users.update(userId, data))

@@ -729,7 +729,7 @@ func (s *BillingCacheService) IncrementUserPlatformQuotaUsage(userID int64, plat
 // ============================================
 
 // CheckBillingEligibility 检查用户是否有资格发起请求
-// 余额模式：检查缓存余额 > 0
+// 余额模式：检查缓存余额 + 有效透支额度是否满足准入下限
 // 订阅模式：检查缓存用量未超过限额（Group限额从参数传入）
 // platform 为请求的目标平台（如 "anthropic"），传空串 "" 时跳过 user × platform quota 检查。
 func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user *User, apiKey *APIKey, group *Group, subscription *UserSubscription, platform string) error {
@@ -749,7 +749,7 @@ func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user 
 			return err
 		}
 	} else {
-		if err := s.checkBalanceEligibility(ctx, user.ID); err != nil {
+		if err := s.checkBalanceEligibility(ctx, user); err != nil {
 			return err
 		}
 	}
@@ -867,16 +867,22 @@ func (s *BillingCacheService) minimumBalanceReserve() float64 {
 	return s.cfg.Billing.MinimumBalanceReserve
 }
 
-func (s *BillingCacheService) balanceBelowEligibilityThreshold(balance float64) bool {
-	if balance <= 0 {
+func (s *BillingCacheService) balanceBelowEligibilityThreshold(balance float64, override *float64) bool {
+	siteDefault := 0.0
+	if s != nil && s.cfg != nil {
+		siteDefault = s.cfg.Billing.DefaultOverdraftLimit
+	}
+	limit := EffectiveOverdraftLimit(override, siteDefault)
+	if balance <= -limit {
 		return true
 	}
 	minimumReserve := s.minimumBalanceReserve()
-	return minimumReserve > 0 && balance < minimumReserve
+	return minimumReserve > 0 && balance < minimumReserve-limit
 }
 
 // checkBalanceEligibility 检查余额模式资格
-func (s *BillingCacheService) checkBalanceEligibility(ctx context.Context, userID int64) error {
+func (s *BillingCacheService) checkBalanceEligibility(ctx context.Context, user *User) error {
+	userID := user.ID
 	balance, err := s.GetUserBalance(ctx, userID)
 	if err != nil {
 		if s.circuitBreaker != nil {
@@ -889,7 +895,7 @@ func (s *BillingCacheService) checkBalanceEligibility(ctx context.Context, userI
 		s.circuitBreaker.OnSuccess()
 	}
 
-	if s.balanceBelowEligibilityThreshold(balance) {
+	if s.balanceBelowEligibilityThreshold(balance, user.OverdraftLimit) {
 		return ErrInsufficientBalance
 	}
 

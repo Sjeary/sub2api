@@ -43,6 +43,15 @@
         </div>
       </div>
       <div>
+        <label class="input-label">{{ t('admin.users.form.overdraftLimit') }}</label>
+        <label class="mb-2 flex items-center gap-2 text-sm">
+          <input v-model="form.inherit_overdraft_limit" type="checkbox" data-test="inherit-overdraft-input" />
+          {{ t('admin.users.form.inheritOverdraftLimit') }}
+        </label>
+        <input v-if="!form.inherit_overdraft_limit" v-model.number="form.overdraft_limit" type="number" min="0" max="999999999999" step="any" class="input" data-test="overdraft-input" />
+        <p class="input-hint">{{ t('admin.users.form.overdraftLimitHint') }}</p>
+      </div>
+      <div>
         <label class="input-label">{{ t('admin.users.form.rpmLimit') }}</label>
         <input
           v-model.number="form.rpm_limit"
@@ -82,7 +91,7 @@ const props = defineProps<{ show: boolean }>()
 const emit = defineEmits(['close', 'success']); const { t } = useI18n()
 const appStore = useAppStore()
 
-const form = reactive({ email: '', password: '', username: '', notes: '', role: 'user' as 'user' | 'admin', balance: '', concurrency: 1, rpm_limit: 0 })
+const form = reactive({ email: '', password: '', username: '', notes: '', role: 'user' as 'user' | 'admin', balance: '', concurrency: 1, rpm_limit: 0, inherit_overdraft_limit: true, overdraft_limit: 0 })
 
 const stepUp = useStepUp()
 const loading = ref(false)
@@ -91,9 +100,14 @@ const submit = async () => {
   if (loading.value) return
   loading.value = true
   try {
-    const { balance: rawBalance, ...rest } = { ...form }
+    const { balance: rawBalance, inherit_overdraft_limit, overdraft_limit, ...rest } = { ...form }
     const balance = String(rawBalance).trim()
-    const payload: typeof rest & { balance?: number } = { ...rest }
+    const limit = inherit_overdraft_limit ? null : overdraft_limit
+    if (limit !== null && (!Number.isFinite(limit) || limit < 0 || limit > 999999999999)) {
+      appStore.showError(t('admin.users.invalidOverdraftLimit'))
+      return
+    }
+    const payload: typeof rest & { balance?: number; overdraft_limit?: number | null } = { ...rest, overdraft_limit: limit }
     if (balance !== '') {
       payload.balance = Number(balance)
     }
@@ -116,7 +130,7 @@ const submit = async () => {
   } finally { loading.value = false }
 }
 
-watch(() => props.show, (v) => { if(v) Object.assign(form, { email: '', password: '', username: '', notes: '', role: 'user', balance: '', concurrency: 1, rpm_limit: 0 }) })
+watch(() => props.show, (v) => { if(v) Object.assign(form, { email: '', password: '', username: '', notes: '', role: 'user', balance: '', concurrency: 1, rpm_limit: 0, inherit_overdraft_limit: true, overdraft_limit: 0 }) })
 
 const generateRandomPassword = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*'

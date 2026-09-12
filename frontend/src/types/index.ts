@@ -85,7 +85,8 @@ export interface User {
   oidc_bound?: boolean
   wechat_bound?: boolean
   role: 'admin' | 'user' // User role for authorization
-  balance: number // User balance for API usage
+  balance: number // Actual user balance for API usage
+  overdraft_limit?: number | null // null inherits the site default; 0 disables overdraft
   frozen_balance?: number // Balance currently held by async batch jobs
   concurrency: number // Allowed concurrent requests
   rpm_limit?: number // User-level RPM cap (0 = unlimited); effective as fallback when group has no rpm_limit
@@ -2024,6 +2025,7 @@ export interface ApiKeyUsageTrendPoint {
 // ==================== Admin User Management ====================
 
 export interface UpdateUserRequest {
+  overdraft_limit?: number | null
   email?: string
   password?: string
   username?: string

@@ -24,6 +24,7 @@ services:
     volumes:
       - ./data:/app/data:Z
     environment:
+      - BILLING_DEFAULT_OVERDRAFT_LIMIT=${BILLING_DEFAULT_OVERDRAFT_LIMIT:-0}
       - AUTO_SETUP=true
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=8080

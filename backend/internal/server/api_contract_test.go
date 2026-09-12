@@ -55,6 +55,7 @@ func TestAPIContracts(t *testing.T) {
 						"role": "user",
 						"balance": 12.5,
 						"frozen_balance": 0,
+					"overdraft_limit": null,
 						"concurrency": 5,
 					"rpm_limit": 0,
 					"status": "active",

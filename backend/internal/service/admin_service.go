@@ -166,6 +166,7 @@ type CreateUserInput struct {
 	Notes                string
 	Role                 string // 空字符串表示使用默认角色(user);合法值 admin/user
 	Balance              *float64
+	OverdraftLimit       *float64
 	Concurrency          int
 	RPMLimit             int
 	AllowedGroups        []int64
@@ -175,16 +176,18 @@ type CreateUserInput struct {
 }
 
 type UpdateUserInput struct {
-	Email         string
-	Password      string
-	Username      *string
-	Notes         *string
-	Role          string   // 空字符串表示"未提供"(不修改);合法值 admin/user
-	Balance       *float64 // 使用指针区分"未提供"和"设置为0"
-	Concurrency   *int     // 使用指针区分"未提供"和"设置为0"
-	RPMLimit      *int     // 使用指针区分"未提供"和"设置为0"
-	Status        string
-	AllowedGroups *[]int64 // 使用指针区分"未提供"和"设置为空数组"
+	Email             string
+	Password          string
+	Username          *string
+	Notes             *string
+	Role              string   // 空字符串表示"未提供"(不修改);合法值 admin/user
+	Balance           *float64 // 使用指针区分"未提供"和"设置为0"
+	OverdraftLimit    *float64
+	OverdraftLimitSet bool // Explicit null resets the override to the site default.
+	Concurrency       *int // 使用指针区分"未提供"和"设置为0"
+	RPMLimit          *int // 使用指针区分"未提供"和"设置为0"
+	Status            string
+	AllowedGroups     *[]int64 // 使用指针区分"未提供"和"设置为空数组"
 	// RestrictPublicGroups 指针区分"未提供"和"显式开关"。
 	RestrictPublicGroups *bool
 	// GroupRates 用户专属分组倍率配置

@@ -133,6 +133,7 @@ export async function create(userData: {
   username?: string
   notes?: string
   role?: 'admin' | 'user'
+  overdraft_limit?: number | null
   balance?: number
   concurrency?: number
   rpm_limit?: number

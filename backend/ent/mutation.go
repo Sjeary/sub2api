@@ -48708,6 +48708,8 @@ type UserMutation struct {
 	role                          *string
 	balance                       *float64
 	addbalance                    *float64
+	overdraft_limit               *float64
+	addoverdraft_limit            *float64
 	frozen_balance                *float64
 	addfrozen_balance             *float64
 	concurrency                   *int
@@ -49157,6 +49159,76 @@ func (m *UserMutation) AddedBalance() (r float64, exists bool) {
 func (m *UserMutation) ResetBalance() {
 	m.balance = nil
 	m.addbalance = nil
+}
+
+// SetOverdraftLimit sets the "overdraft_limit" field.
+func (m *UserMutation) SetOverdraftLimit(f float64) {
+	m.overdraft_limit = &f
+	m.addoverdraft_limit = nil
+}
+
+// OverdraftLimit returns the value of the "overdraft_limit" field in the mutation.
+func (m *UserMutation) OverdraftLimit() (r float64, exists bool) {
+	v := m.overdraft_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOverdraftLimit returns the old "overdraft_limit" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldOverdraftLimit(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOverdraftLimit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOverdraftLimit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOverdraftLimit: %w", err)
+	}
+	return oldValue.OverdraftLimit, nil
+}
+
+// AddOverdraftLimit adds f to the "overdraft_limit" field.
+func (m *UserMutation) AddOverdraftLimit(f float64) {
+	if m.addoverdraft_limit != nil {
+		*m.addoverdraft_limit += f
+	} else {
+		m.addoverdraft_limit = &f
+	}
+}
+
+// AddedOverdraftLimit returns the value that was added to the "overdraft_limit" field in this mutation.
+func (m *UserMutation) AddedOverdraftLimit() (r float64, exists bool) {
+	v := m.addoverdraft_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearOverdraftLimit clears the value of the "overdraft_limit" field.
+func (m *UserMutation) ClearOverdraftLimit() {
+	m.overdraft_limit = nil
+	m.addoverdraft_limit = nil
+	m.clearedFields[user.FieldOverdraftLimit] = struct{}{}
+}
+
+// OverdraftLimitCleared returns if the "overdraft_limit" field was cleared in this mutation.
+func (m *UserMutation) OverdraftLimitCleared() bool {
+	_, ok := m.clearedFields[user.FieldOverdraftLimit]
+	return ok
+}
+
+// ResetOverdraftLimit resets all changes to the "overdraft_limit" field.
+func (m *UserMutation) ResetOverdraftLimit() {
+	m.overdraft_limit = nil
+	m.addoverdraft_limit = nil
+	delete(m.clearedFields, user.FieldOverdraftLimit)
 }
 
 // SetFrozenBalance sets the "frozen_balance" field.
@@ -50709,7 +50781,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 26)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -50730,6 +50802,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.balance != nil {
 		fields = append(fields, user.FieldBalance)
+	}
+	if m.overdraft_limit != nil {
+		fields = append(fields, user.FieldOverdraftLimit)
 	}
 	if m.frozen_balance != nil {
 		fields = append(fields, user.FieldFrozenBalance)
@@ -50807,6 +50882,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.Role()
 	case user.FieldBalance:
 		return m.Balance()
+	case user.FieldOverdraftLimit:
+		return m.OverdraftLimit()
 	case user.FieldFrozenBalance:
 		return m.FrozenBalance()
 	case user.FieldConcurrency:
@@ -50866,6 +50943,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldRole(ctx)
 	case user.FieldBalance:
 		return m.OldBalance(ctx)
+	case user.FieldOverdraftLimit:
+		return m.OldOverdraftLimit(ctx)
 	case user.FieldFrozenBalance:
 		return m.OldFrozenBalance(ctx)
 	case user.FieldConcurrency:
@@ -50959,6 +51038,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetBalance(v)
+		return nil
+	case user.FieldOverdraftLimit:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOverdraftLimit(v)
 		return nil
 	case user.FieldFrozenBalance:
 		v, ok := value.(float64)
@@ -51097,6 +51183,9 @@ func (m *UserMutation) AddedFields() []string {
 	if m.addbalance != nil {
 		fields = append(fields, user.FieldBalance)
 	}
+	if m.addoverdraft_limit != nil {
+		fields = append(fields, user.FieldOverdraftLimit)
+	}
 	if m.addfrozen_balance != nil {
 		fields = append(fields, user.FieldFrozenBalance)
 	}
@@ -51122,6 +51211,8 @@ func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case user.FieldBalance:
 		return m.AddedBalance()
+	case user.FieldOverdraftLimit:
+		return m.AddedOverdraftLimit()
 	case user.FieldFrozenBalance:
 		return m.AddedFrozenBalance()
 	case user.FieldConcurrency:
@@ -51147,6 +51238,13 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddBalance(v)
+		return nil
+	case user.FieldOverdraftLimit:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOverdraftLimit(v)
 		return nil
 	case user.FieldFrozenBalance:
 		v, ok := value.(float64)
@@ -51194,6 +51292,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldDeletedAt) {
 		fields = append(fields, user.FieldDeletedAt)
 	}
+	if m.FieldCleared(user.FieldOverdraftLimit) {
+		fields = append(fields, user.FieldOverdraftLimit)
+	}
 	if m.FieldCleared(user.FieldTotpSecretEncrypted) {
 		fields = append(fields, user.FieldTotpSecretEncrypted)
 	}
@@ -51225,6 +51326,9 @@ func (m *UserMutation) ClearField(name string) error {
 	switch name {
 	case user.FieldDeletedAt:
 		m.ClearDeletedAt()
+		return nil
+	case user.FieldOverdraftLimit:
+		m.ClearOverdraftLimit()
 		return nil
 	case user.FieldTotpSecretEncrypted:
 		m.ClearTotpSecretEncrypted()
@@ -51269,6 +51373,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldBalance:
 		m.ResetBalance()
+		return nil
+	case user.FieldOverdraftLimit:
+		m.ResetOverdraftLimit()
 		return nil
 	case user.FieldFrozenBalance:
 		m.ResetFrozenBalance()

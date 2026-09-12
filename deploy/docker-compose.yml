@@ -38,6 +38,7 @@ services:
       # in config.yaml.
       # - ./codex-instructions.md.tmpl:/app/data/codex-instructions.md.tmpl:ro
     environment:
+      - BILLING_DEFAULT_OVERDRAFT_LIMIT=${BILLING_DEFAULT_OVERDRAFT_LIMIT:-0}
       # =======================================================================
       # Auto Setup (REQUIRED for Docker deployment)
       # =======================================================================
