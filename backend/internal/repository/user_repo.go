@@ -847,7 +847,8 @@ func (r *userRepository) UpdateBalance(ctx context.Context, id int64, amount flo
 func (r *userRepository) ApplyRedeemBalanceAdjustment(ctx context.Context, id int64, delta float64) error {
 	const updateSQL = `
 		UPDATE users
-		SET balance = GREATEST(balance + $1, 0), updated_at = NOW()
+		SET balance = CASE WHEN $1::numeric >= 0 THEN balance + $1
+		    ELSE LEAST(balance, GREATEST(balance + $1, 0)) END, updated_at = NOW()
 		WHERE id = $2 AND deleted_at IS NULL
 	`
 	client := clientFromContext(ctx, r.client)
@@ -937,14 +938,14 @@ func (r *userRepository) DeductAvailableBalance(ctx context.Context, id int64, a
 	return deducted, rows.Err()
 }
 
-// AdjustBalance 原子地把 delta 累加到余额上，结果为负时整条语句不生效。
+// AdjustBalance 原子地累加余额。充值允许部分偿还欠款；扣减不能新增欠款。
 // 相比"读余额 → 算新值 → 整行写回"，这里把读与写压进同一条 UPDATE，
 // 并发的计费扣款不会被旧快照覆盖。
 func (r *userRepository) AdjustBalance(ctx context.Context, id int64, delta float64) (service.BalanceChange, error) {
 	const updateSQL = `
 		UPDATE users
 		SET balance = balance + $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL AND balance + $1 >= 0
+		WHERE id = $2 AND deleted_at IS NULL AND ($1 > 0 OR balance + $1 >= 0)
 		RETURNING balance - $1, balance
 	`
 	change, ok, err := scanBalanceChange(ctx, clientFromContext(ctx, r.client), updateSQL, delta, id)
