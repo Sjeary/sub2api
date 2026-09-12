@@ -296,6 +296,7 @@ type APIKeyService struct {
 	authNegativeCacheL1       *ristretto.Cache
 	authCfg                   apiKeyAuthCacheConfig
 	authGroup                 singleflight.Group
+	authCacheGenerations      [64]authCacheGeneration
 	authLookupSlots           chan struct{}
 	authLookupTotal           atomic.Uint64
 	authLookupRejected        atomic.Uint64

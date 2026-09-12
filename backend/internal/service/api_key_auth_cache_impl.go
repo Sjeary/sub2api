@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
+	"sync"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
@@ -15,6 +16,21 @@ import (
 )
 
 const apiKeyAuthSnapshotVersion = 25 // v25: user overdraft limit
+
+type authCacheGeneration struct {
+	mu    sync.Mutex
+	value uint64
+}
+
+// Fixed stripes bound bookkeeping independently of the number of keys seen.
+// A collision only causes an extra reload when another key is invalidated.
+func (s *APIKeyService) authCacheGenerationFor(key string) *authCacheGeneration {
+	index := 0
+	for i := range len(key) {
+		index = (index*33 + int(key[i])) % len(s.authCacheGenerations)
+	}
+	return &s.authCacheGenerations[index]
+}
 
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
@@ -105,7 +121,7 @@ func (s *APIKeyService) initAuthCache(cfg *config.Config) {
 // StartAuthCacheInvalidationSubscriber starts the Pub/Sub subscriber for L1 cache invalidation.
 // This should be called after the service is fully initialized.
 func (s *APIKeyService) StartAuthCacheInvalidationSubscriber(ctx context.Context) {
-	if s.cache == nil || (s.authCacheL1 == nil && s.authNegativeCacheL1 == nil) {
+	if s.cache == nil || (s.authCacheL1 == nil && s.authNegativeCacheL1 == nil && !s.authCfg.l2Enabled()) {
 		return
 	}
 	s.authInvalidationStart.Do(func() {
@@ -156,12 +172,11 @@ func (s *APIKeyService) invalidateLocalAuthCache(cacheKey string) {
 	if s == nil {
 		return
 	}
-	if s.authCacheL1 != nil {
-		s.authCacheL1.Del(cacheKey)
-	}
-	if s.authNegativeCacheL1 != nil {
-		s.authNegativeCacheL1.Del(cacheKey)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	// Remove any L2 entry published before this instance received the message.
+	// Do not publish again: this path handles an existing invalidation event.
+	s.clearAuthCache(ctx, cacheKey)
 }
 
 type AuthCacheInvalidationSubscriberHealth struct {
@@ -197,9 +212,13 @@ func (s *APIKeyService) authCacheKey(key string) string {
 }
 
 func (s *APIKeyService) getAuthCacheEntry(ctx context.Context, cacheKey string) (*APIKeyAuthCacheEntry, bool) {
+	generation := s.authCacheGenerationFor(cacheKey)
+	generation.mu.Lock()
+	version := generation.value
 	if s.authCacheL1 != nil {
 		if val, ok := s.authCacheL1.Get(cacheKey); ok {
 			if entry, ok := val.(*APIKeyAuthCacheEntry); ok {
+				generation.mu.Unlock()
 				return entry, true
 			}
 		}
@@ -207,15 +226,22 @@ func (s *APIKeyService) getAuthCacheEntry(ctx context.Context, cacheKey string) 
 	if s.authNegativeCacheL1 != nil {
 		if val, ok := s.authNegativeCacheL1.Get(cacheKey); ok {
 			if entry, ok := val.(*APIKeyAuthCacheEntry); ok && entry.NotFound {
+				generation.mu.Unlock()
 				return entry, true
 			}
 		}
 	}
+	generation.mu.Unlock()
 	if s.cache == nil || !s.authCfg.l2Enabled() {
 		return nil, false
 	}
 	entry, err := s.cache.GetAuthCache(ctx, cacheKey)
 	if err != nil {
+		return nil, false
+	}
+	generation.mu.Lock()
+	defer generation.mu.Unlock()
+	if generation.value != version {
 		return nil, false
 	}
 	s.setAuthCacheL1(cacheKey, entry)
@@ -252,6 +278,18 @@ func (s *APIKeyService) setAuthCacheEntry(ctx context.Context, cacheKey string, 
 }
 
 func (s *APIKeyService) deleteAuthCache(ctx context.Context, cacheKey string) {
+	s.clearAuthCache(ctx, cacheKey)
+	if s.cache != nil {
+		_ = s.cache.PublishAuthCacheInvalidation(ctx, cacheKey)
+	}
+}
+
+func (s *APIKeyService) clearAuthCache(ctx context.Context, cacheKey string) {
+	generation := s.authCacheGenerationFor(cacheKey)
+	generation.mu.Lock()
+	defer generation.mu.Unlock()
+	generation.value++
+	s.authGroup.Forget(cacheKey)
 	if s.authCacheL1 != nil {
 		s.authCacheL1.Del(cacheKey)
 	}
@@ -262,12 +300,38 @@ func (s *APIKeyService) deleteAuthCache(ctx context.Context, cacheKey string) {
 		return
 	}
 	_ = s.cache.DeleteAuthCache(ctx, cacheKey)
-	// Publish invalidation message to other instances
-	_ = s.cache.PublishAuthCacheInvalidation(ctx, cacheKey)
 }
 
 func (s *APIKeyService) loadAuthCacheEntry(ctx context.Context, key, cacheKey string) (*APIKeyAuthCacheEntry, error) {
+	for range 2 {
+		entry, err := s.loadAuthCacheEntryOnce(ctx, key, cacheKey)
+		if !errors.Is(err, errAuthCacheLoadInvalidated) {
+			return entry, err
+		}
+	}
+	return nil, ErrAPIKeyAuthOverloaded
+}
+
+var errAuthCacheLoadInvalidated = errors.New("authentication cache invalidated during load")
+
+func (s *APIKeyService) loadAuthCacheEntryOnce(ctx context.Context, key, cacheKey string) (*APIKeyAuthCacheEntry, error) {
+	generation := s.authCacheGenerationFor(cacheKey)
+	generation.mu.Lock()
+	version := generation.value
+	generation.mu.Unlock()
 	apiKey, err := s.lookupAPIKeyForAuth(ctx, key)
+	var snapshot *APIKeyAuthSnapshot
+	if err == nil && apiKey != nil {
+		apiKey.Key = key
+		// Snapshot construction may read per-group settings from the database.
+		// Do not hold a cache stripe while performing those reads.
+		snapshot = s.snapshotFromAPIKey(ctx, apiKey)
+	}
+	generation.mu.Lock()
+	defer generation.mu.Unlock()
+	if generation.value != version {
+		return nil, errAuthCacheLoadInvalidated
+	}
 	if err != nil {
 		if errors.Is(err, ErrAPIKeyNotFound) {
 			entry := &APIKeyAuthCacheEntry{NotFound: true}
@@ -281,8 +345,6 @@ func (s *APIKeyService) loadAuthCacheEntry(ctx context.Context, key, cacheKey st
 		}
 		return nil, fmt.Errorf("get api key: %w", err)
 	}
-	apiKey.Key = key
-	snapshot := s.snapshotFromAPIKey(ctx, apiKey)
 	if snapshot == nil {
 		return nil, fmt.Errorf("get api key: %w", ErrAPIKeyNotFound)
 	}
