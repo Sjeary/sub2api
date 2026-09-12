@@ -6,14 +6,14 @@ import "github.com/Wei-Shaw/sub2api/internal/service"
 
 func (s *UserRepoSuite) TestDebtBalance_PartialRepaymentPreservesDebt() {
 	user := s.mustCreateUser(&service.User{Email: "overdraft-repay@example.test", Balance: -10})
-	change, err := s.repo.AdjustBalance(s.ctx, user.ID, 3)
+	change, err := s.repo.AdjustBalance(s.ctx, user.ID, 0.3)
 	s.Require().NoError(err)
 	s.Require().Equal(-10.0, change.Old)
-	s.Require().Equal(-7.0, change.New)
+	s.Require().Equal(-9.7, change.New)
 	s.Require().NoError(s.repo.UpdateBalance(s.ctx, user.ID, 2))
 	current, err := s.repo.GetByID(s.ctx, user.ID)
 	s.Require().NoError(err)
-	s.Require().Equal(-5.0, current.Balance)
+	s.Require().Equal(-7.7, current.Balance)
 	_, err = s.repo.AdjustBalance(s.ctx, user.ID, -1)
 	s.Require().ErrorIs(err, service.ErrBalanceNegative)
 }

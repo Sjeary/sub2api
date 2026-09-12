@@ -953,7 +953,7 @@ func (r *userRepository) AdjustBalance(ctx context.Context, id int64, delta floa
 	const updateSQL = `
 		UPDATE users
 		SET balance = balance + $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL AND ($1 > 0 OR balance + $1 >= 0)
+		WHERE id = $2 AND deleted_at IS NULL AND ($1::numeric > 0 OR balance + $1 >= 0)
 		RETURNING balance - $1, balance
 	`
 	change, ok, err := scanBalanceChange(ctx, clientFromContext(ctx, r.client), updateSQL, delta, id)
