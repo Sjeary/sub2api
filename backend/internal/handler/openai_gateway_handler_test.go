@@ -1933,6 +1933,9 @@ type openAIResponsesWSUsageLogCase struct {
 	firstFrameCloseExpected bool
 	// secondTurnCloseExpected：第二个 turn 被拒（连接被 1008 关闭）。
 	secondTurnCloseExpected bool
+	secondTurnCloseReason   string
+	billingUserRepo         service.UserRepository
+	billingSiteLimit        float64
 }
 
 type openAIResponsesWSUsageLogResult struct {
@@ -2963,7 +2966,13 @@ func runOpenAIResponsesWebSocketUsageLogCase(t *testing.T, tc openAIResponsesWSU
 		}, nil, nil, nil, nil)
 	}
 
-	billingCacheSvc := service.NewBillingCacheService(nil, nil, nil, nil, nil, nil, cfg, nil)
+	billingCfg := *cfg
+	if tc.billingUserRepo != nil {
+		billingCfg.RunMode = config.RunModeStandard
+		billingCfg.Billing.DefaultOverdraftLimit = tc.billingSiteLimit
+	}
+	billingCacheSvc := service.NewBillingCacheService(nil, tc.billingUserRepo, nil, nil, nil, nil, &billingCfg, nil)
+	t.Cleanup(billingCacheSvc.Stop)
 	gatewaySvc := service.NewOpenAIGatewayService(
 		accountRepo,
 		usageRepo,
@@ -3086,7 +3095,27 @@ func runOpenAIResponsesWebSocketUsageLogCase(t *testing.T, tc openAIResponsesWSU
 			var closeErr coderws.CloseError
 			require.ErrorAs(t, readErr, &closeErr)
 			require.Equal(t, coderws.StatusPolicyViolation, closeErr.Code)
-			require.Contains(t, closeErr.Reason, "not available for this group")
+			reason := tc.secondTurnCloseReason
+			if reason == "" {
+				reason = "not available for this group"
+			}
+			require.Contains(t, closeErr.Reason, reason)
+			forwarded := 1
+			if tc.midPayload != "" {
+				forwarded++
+			}
+			for range forwarded {
+				select {
+				case <-upstreamPayloadCh:
+				default:
+					t.Fatal("missing earlier upstream request")
+				}
+			}
+			select {
+			case payload := <-upstreamPayloadCh:
+				t.Fatalf("rejected second turn reached upstream: %s", payload)
+			default:
+			}
 			_ = clientConn.CloseNow()
 			return openAIResponsesWSUsageLogResult{}
 		}

@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"math"
 	"testing"
 
@@ -43,6 +44,56 @@ func TestOverdraftBillingEligibility(t *testing.T) {
 			}
 		})
 	}
+}
+
+type nextTurnOverdraftRepo struct {
+	UserRepository
+	user  *User
+	err   error
+	calls int
+}
+
+func (r *nextTurnOverdraftRepo) GetByID(context.Context, int64) (*User, error) {
+	r.calls++
+	return r.user, r.err
+}
+
+func TestOverdraftNextTurnReadsLatestLedger(t *testing.T) {
+	limit := 10.0
+	repo := &nextTurnOverdraftRepo{user: &User{ID: 1, Balance: -8, OverdraftLimit: &limit}}
+	cache := &balanceEligibilityCacheStub{balance: 100}
+	cfg := &config.Config{}
+	cfg.Billing.DefaultOverdraftLimit = 20
+	svc := NewBillingCacheService(cache, repo, nil, nil, nil, nil, cfg, nil)
+	t.Cleanup(svc.Stop)
+	require.NoError(t, svc.CheckBalanceForNextTurn(context.Background(), 1, nil, nil))
+	zero := 0.0
+	repo.user.OverdraftLimit = &zero
+	require.ErrorIs(t, svc.CheckBalanceForNextTurn(context.Background(), 1, nil, nil), ErrInsufficientBalance)
+	repo.user.OverdraftLimit = nil
+	require.NoError(t, svc.CheckBalanceForNextTurn(context.Background(), 1, nil, nil))
+	repo.user.Balance = -20
+	require.ErrorIs(t, svc.CheckBalanceForNextTurn(context.Background(), 1, nil, nil), ErrInsufficientBalance)
+	repo.err = errors.New("database unavailable")
+	require.ErrorIs(t, svc.CheckBalanceForNextTurn(context.Background(), 1, nil, nil), ErrBillingServiceUnavailable)
+	repo.err = nil
+	repo.user = nil
+	require.ErrorIs(t, svc.CheckBalanceForNextTurn(context.Background(), 1, nil, nil), ErrBillingServiceUnavailable)
+	require.Equal(t, 6, repo.calls)
+}
+
+func TestOverdraftNextTurnPreservesOtherBillingModes(t *testing.T) {
+	repo := &nextTurnOverdraftRepo{err: errors.New("must not read balance")}
+	cfg := &config.Config{RunMode: config.RunModeSimple}
+	svc := NewBillingCacheService(nil, repo, nil, nil, nil, nil, cfg, nil)
+	t.Cleanup(svc.Stop)
+	require.NoError(t, svc.CheckBalanceForNextTurn(context.Background(), 1, nil, nil))
+	cfg.RunMode = config.RunModeStandard
+	group := &Group{SubscriptionType: SubscriptionTypeSubscription}
+	require.NoError(t, svc.CheckBalanceForNextTurn(context.Background(), 1, group, &UserSubscription{}))
+	require.Zero(t, repo.calls)
+	// Missing subscriptions follow the existing balance fallback.
+	require.ErrorIs(t, svc.CheckBalanceForNextTurn(context.Background(), 1, group, nil), ErrBillingServiceUnavailable)
 }
 
 func TestOverdraftReserveAndCacheInvalidation(t *testing.T) {
