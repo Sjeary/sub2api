@@ -772,7 +772,7 @@ func (s *AccountTestService) fetchUpstreamModelList(ctx context.Context, account
 	}
 
 	if isOfficialClineModelsRequest(account, req) {
-		body, err = s.completeClineModelCatalog(ctx, account, req, body, bodyLimit)
+		body, err = s.completeClineModelCatalog(ctx, account, body, bodyLimit)
 		if err != nil {
 			return nil, nil, newUpstreamModelSyncUpstreamError("Failed to complete Cline model list", err)
 		}

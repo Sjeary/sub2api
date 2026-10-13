@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const clineRecommendedModelsURL = "https://api.cline.bot/api/v1/ai/cline/recommended-models"
+
 // Cline's standard catalog omits ClinePass and free model IDs. The official
 // client's public recommendation feed supplies those entries separately.
 func isOfficialClineModelsRequest(account *Account, req *http.Request) bool {
@@ -18,14 +20,10 @@ func isOfficialClineModelsRequest(account *Account, req *http.Request) bool {
 		(req.URL.Port() == "" || req.URL.Port() == "443") && req.URL.Path == "/api/v1/models"
 }
 
-func (s *AccountTestService) completeClineModelCatalog(ctx context.Context, account *Account, modelsRequest *http.Request, body []byte, limit int64) ([]byte, error) {
+func (s *AccountTestService) completeClineModelCatalog(ctx context.Context, account *Account, body []byte, limit int64) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	target := *modelsRequest.URL
-	target.Path = "/api/v1/ai/cline/recommended-models"
-	target.RawPath = ""
-	target.RawQuery = ""
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, clineRecommendedModelsURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -38,14 +36,14 @@ func (s *AccountTestService) completeClineModelCatalog(ctx context.Context, acco
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("Cline recommendation feed returned HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("cline recommendation feed returned HTTP %d", resp.StatusCode)
 	}
 	recommended, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return nil, fmt.Errorf("read Cline recommendation feed: %w", err)
 	}
 	if int64(len(recommended)) > limit {
-		return nil, fmt.Errorf("Cline recommendation feed exceeds %d bytes", limit)
+		return nil, fmt.Errorf("cline recommendation feed exceeds %d bytes", limit)
 	}
 	merged, err := mergeClineModelCatalog(body, recommended)
 	if err != nil {
@@ -101,7 +99,7 @@ func mergeClineModelCatalog(body, recommended []byte) ([]byte, error) {
 		}
 	}
 	if valid == 0 {
-		return nil, fmt.Errorf("Cline recommendation feed returned no models")
+		return nil, fmt.Errorf("cline recommendation feed returned no models")
 	}
 	if added == 0 {
 		return body, nil
