@@ -771,6 +771,13 @@ func (s *AccountTestService) fetchUpstreamModelList(ctx context.Context, account
 		}
 	}
 
+	if isOfficialClineModelsRequest(account, req) {
+		body, err = s.completeClineModelCatalog(ctx, account, req, body, bodyLimit)
+		if err != nil {
+			return nil, nil, newUpstreamModelSyncUpstreamError("Failed to complete Cline model list", err)
+		}
+	}
+
 	extractModels := extractUpstreamModelIDs
 	if account.IsGrok() {
 		extractModels = extractGrokUpstreamModelIDs
