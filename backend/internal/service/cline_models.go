@@ -64,6 +64,9 @@ func mergeClineModelCatalog(body, recommended []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if entries == nil || (len(entries) > 0 && len(models) == 0) {
+		return nil, fmt.Errorf("upstream model catalog is missing valid entries")
+	}
 	seen := make(map[string]bool, len(models))
 	for _, model := range models {
 		seen[model] = true

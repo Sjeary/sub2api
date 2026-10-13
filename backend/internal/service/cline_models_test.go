@@ -175,12 +175,36 @@ func TestClineModelsCanceledRequestDoesNotReturnPartialCatalog(t *testing.T) {
 }
 
 func TestClineModelsEmptyStandardCatalogCanDiscoverPassModels(t *testing.T) {
-	upstream := &httpUpstreamRecorder{responses: []*http.Response{
-		clineModelsResponse(200, `{"data":[]}`),
-		clineModelsResponse(200, `{"clinePass":[{"id":"cline-pass/glm-5.3"}]}`),
-	}}
-	svc := &AccountTestService{httpUpstream: upstream, cfg: upstreamModelSyncTestConfig()}
-	models, err := svc.FetchUpstreamSupportedModels(context.Background(), clineModelsAccount(""))
-	require.NoError(t, err)
-	require.Equal(t, []string{"cline-pass/glm-5.3"}, models)
+	for _, body := range []string{`{"data":[]}`, `{"models":[]}`, `[]`} {
+		t.Run(body, func(t *testing.T) {
+			upstream := &httpUpstreamRecorder{responses: []*http.Response{
+				clineModelsResponse(200, body),
+				clineModelsResponse(200, `{"clinePass":[{"id":"cline-pass/glm-5.3"}]}`),
+			}}
+			svc := &AccountTestService{httpUpstream: upstream, cfg: upstreamModelSyncTestConfig()}
+			models, err := svc.FetchUpstreamSupportedModels(context.Background(), clineModelsAccount(""))
+			require.NoError(t, err)
+			require.Equal(t, []string{"cline-pass/glm-5.3"}, models)
+		})
+	}
+}
+
+func TestClineModelsRejectInvalidStandardCatalog(t *testing.T) {
+	for _, body := range []string{
+		`null`, " \n null \t", `[null]`, `{"data":[null]}`, `{"data":[{}]}`,
+		`{"data":[{"id":""}]}`, `{"data":null}`, `{"error":"unavailable"}`,
+	} {
+		t.Run(body, func(t *testing.T) {
+			upstream := &httpUpstreamRecorder{responses: []*http.Response{
+				clineModelsResponse(200, body),
+				clineModelsResponse(200, `{"clinePass":[{"id":"cline-pass/glm-5.3","context_window":128000,"reasoning":false,"input_modalities":["text"]}]}`),
+			}, resp: clineModelsResponse(503, `{}`)}
+			repo := &upstreamModelMetadataRepoStub{}
+			svc := &AccountTestService{httpUpstream: upstream, cfg: upstreamModelSyncTestConfig(), accountRepo: repo}
+			catalog, err := svc.SyncUpstreamModelCatalog(context.Background(), clineModelsAccount(""))
+			require.Error(t, err)
+			require.Nil(t, catalog)
+			require.Nil(t, repo.updates)
+		})
+	}
 }
